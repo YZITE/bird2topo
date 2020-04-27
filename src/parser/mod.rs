@@ -126,6 +126,9 @@ impl<'a> RouterData<'a> {
             })
             .collect()
     }
+    pub fn is_unreachable(&self) -> bool {
+        self.distance == 255
+    }
 }
 
 pub struct Topology<'a> {
@@ -213,7 +216,16 @@ pub fn parse_topology<'a, 'b: 'a>(
                 if !ent.subs.is_empty() {
                     return Err(TopologyParseError::UnknownStructure(3));
                 }
-                if ent.head.starts_with(DISTANCE_PFX) {
+                if ent.head == "unreachable" {
+                    let new_distance: u8 = 255;
+                    if rdat.distance != new_distance && rdat.distance != 255 {
+                        return Err(TopologyParseError::DistanceMismatch(
+                            rdat.distance,
+                            new_distance,
+                        ));
+                    }
+                    rdat.distance = new_distance;
+                } else if ent.head.starts_with(DISTANCE_PFX) {
                     let new_distance: u8 = ent.head[DISTANCE_PFX.len()..].parse()?;
                     if rdat.distance != new_distance && rdat.distance != 255 {
                         return Err(TopologyParseError::DistanceMismatch(

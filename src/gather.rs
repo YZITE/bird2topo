@@ -53,12 +53,12 @@ pub fn gather(protos: &[&str]) -> Option<String> {
     if topo.areas.is_empty() {
         return None;
     }
-    let mut routers: HashMap<u64, Map<String, Value>> =
-        topo.routers.iter().map(|(&k, _)| (k, Map::new())).collect();
+    let mut routers: HashMap<u64, (bool, Map<String, Value>)> =
+        topo.routers.iter().map(|(&k, _)| (k, (false, Map::new()))).collect();
     let mut edges: Vec<Edge> = Vec::new();
     if let Some(bb_area) = topo.areas.get("0.0.0.0") {
         for (&rid, router) in bb_area.iter() {
-            routers.insert(rid, router.get_details());
+            routers.insert(rid, (!router.is_unreachable(), router.get_details()));
             for i in router.neighbors() {
                 let orid = crate::parser::router2id(i);
                 edges.push(Edge {
@@ -74,8 +74,8 @@ pub fn gather(protos: &[&str]) -> Option<String> {
         .map(|(&k, &v)| Node {
             id: k,
             label: v.to_string(),
-            group: "ytrizja".to_string(),
-            details: routers.get(&k).cloned().unwrap_or_else(Map::new),
+            group: if routers.get(&k).map(|i| i.0).unwrap_or(false) { "ytrizja" } else { "unreachable" }.to_string(),
+            details: routers.get(&k).cloned().map(|i| i.1).unwrap_or_else(Map::new),
         })
         .collect();
     edges.sort();
