@@ -42,6 +42,9 @@ impl ws::Handler for Handler {
                     recv(upd_chan) -> dath => ws_sender
                         .broadcast(dath.expect("upd_chan closed"))
                         .expect("ws_sender.broadcast failed"),
+                    default(std::time::Duration::from_secs(30)) =>
+                        ws_sender.ping(Vec::new())
+                        .expect("ws_sender.ping failed"),
                 }
             }
         });
