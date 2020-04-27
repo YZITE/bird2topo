@@ -1,17 +1,12 @@
 use crossbeam_channel as chan;
-use serde::Serialize;
-use serde_json::{map::Map, Value};
 use std::thread::spawn;
 use std::time::{Duration, Instant};
 
+mod gather;
 mod handler;
+mod parser;
 
-#[derive(Serialize)]
-struct Node {
-    label: String,
-    group: String,
-    details: Map<String, Value>,
-}
+static OSPF_PROTOS: &[&str] = &["ytrizja", "ytrizja_v6"];
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -19,19 +14,11 @@ fn main() {
     let (s_upd, r_upd) = chan::bounded(0);
     let (s_thinf, r_thinf) = chan::bounded(1);
 
-    let base_data_set = vec![Node {
-        label: "ytrizja".to_string(),
-        group: "home".to_string(),
-        details: Map::new(),
-    }];
-
     spawn(move || {
         let mut prev_hash = None;
         loop {
             // update data regulary
-            // TODO: gather data from BIRDc
-            let dath = serde_json::to_string(&base_data_set).expect("serialization failed");
-            {
+            if let Some(dath) = gather::gather(OSPF_PROTOS) {
                 use std::hash::{Hash, Hasher};
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 dath.hash(&mut hasher);
