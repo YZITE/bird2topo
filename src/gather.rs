@@ -54,23 +54,28 @@ pub fn gather(protos: &[&str]) -> Option<String> {
     if topo.areas.is_empty() {
         return None;
     }
-    let mut routers: HashMap<u64, (bool, Map<String, Value>)> = topo
-        .routers
+    let mut nodes_: HashMap<u64, (&str, bool, Map<String, Value>)> = topo
+        .interned
         .iter()
-        .map(|(&k, _)| (k, (false, Map::new())))
+        .map(|(&k, &v)| (k, (v, false, Map::new())))
         .collect();
     let mut nodes: HashMap<u64, Node> = HashMap::new();
     let mut edges: Vec<Edge> = Vec::new();
     if let Some(bb_area) = topo.areas.get("0.0.0.0") {
-        for (&rid, router) in bb_area.iter() {
-            routers.insert(rid, (!router.is_unreachable(), router.get_details()));
+        let mut insert_edge = |id1, id2, w| {
+            edges.push(Edge {
+                from: std::cmp::min(id1, id2),
+                to: std::cmp::max(id1, id2),
+                length: std::cmp::min(w / 100 + 1, 1000),
+            });
+        };
+        for (&rid, router) in bb_area.routers.iter() {
+            let mut roun = nodes_.get_mut(&rid).unwrap();
+            roun.1 = !router.is_unreachable();
+            roun.2 = router.get_details();
             for (i, w) in router.neighbors() {
                 let orid = crate::parser::router2id(i);
-                edges.push(Edge {
-                    from: std::cmp::min(rid, orid),
-                    to: std::cmp::max(rid, orid),
-                    length: std::cmp::min(w / 100 + 1, 1000),
-                });
+                insert_edge(rid, orid, w);
             }
             for (i, w) in router.conns() {
                 let orid = crate::parser::router2id(i);
@@ -80,31 +85,41 @@ pub fn gather(protos: &[&str]) -> Option<String> {
                     group: "network".to_string(),
                     details: Map::new(),
                 });
-                edges.push(Edge {
-                    from: std::cmp::min(rid, orid),
-                    to: std::cmp::max(rid, orid),
-                    length: std::cmp::min(w / 100 + 1, 1000),
-                });
+                insert_edge(rid, orid, w);
+            }
+        }
+        for (&nid, network) in bb_area.networks.iter() {
+            let mut ntwn = nodes_.get_mut(&nid).unwrap();
+            ntwn.1 = !network.is_unreachable();
+            ntwn.2.insert(
+                "distance".to_string(),
+                Value::Number(network.distance.into()),
+            );
+            for i in network
+                .routers
+                .iter()
+                .copied()
+                .chain(std::iter::once(network.dr))
+            {
+                insert_edge(nid, i, 0);
             }
         }
     }
-    nodes.extend(topo.routers.iter().map(|(&k, &v)| {
+    nodes.extend(nodes_.iter().map(|(&k, v)| {
         (
             k,
             Node {
                 id: k,
-                label: v.to_string(),
-                group: if routers.get(&k).map(|i| i.0).unwrap_or(false) {
-                    "ytrizja"
-                } else {
+                label: v.0.to_string(),
+                group: if !v.1 {
                     "unreachable"
+                } else if v.0.contains('/') {
+                    "network"
+                } else {
+                    "ytrizja"
                 }
                 .to_string(),
-                details: routers
-                    .get(&k)
-                    .cloned()
-                    .map(|i| i.1)
-                    .unwrap_or_else(Map::new),
+                details: v.2.clone(),
             },
         )
     }));
