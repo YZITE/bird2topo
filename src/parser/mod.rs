@@ -114,12 +114,36 @@ impl<'a> RouterData<'a> {
         }
         ret
     }
-    pub fn neighbors(&self) -> Vec<&'a str> {
+    pub fn neighbors(&self) -> Vec<(&'a str, u16)> {
         self.entries
             .iter()
             .filter_map(|i| {
                 if i.typ == EntryType::Router {
-                    Some(i.obj)
+                    Some((
+                        i.obj,
+                        match i.metric {
+                            Metric::Internal(x) => x,
+                            Metric::External(x) => 1000 + x,
+                        },
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+    pub fn conns(&self) -> Vec<(&'a str, u16)> {
+        self.entries
+            .iter()
+            .filter_map(|i| {
+                if i.typ != EntryType::Router {
+                    Some((
+                        i.obj,
+                        match i.metric {
+                            Metric::Internal(x) => x,
+                            Metric::External(x) => 1000 + x,
+                        },
+                    ))
                 } else {
                     None
                 }
