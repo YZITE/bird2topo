@@ -46,7 +46,7 @@ impl<T> Drop for TokenGuard<T> {
 
 impl<T> Tokens<T> {
     pub fn new(evc: chan::Sender<TokenUpdate<T>>) -> Self {
-        let ibs: BitSet<_> = (0..TokenValue::MAX - 1).into_iter().collect();
+        let ibs: BitSet<_> = (0..(u16::MAX - 1) as TokenValue).into_iter().collect();
         Tokens(Arc::new(TokensInner {
             data: Mutex::new(ibs),
             evc,
