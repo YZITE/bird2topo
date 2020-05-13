@@ -5,12 +5,13 @@ authors = ["Erik Zscheile <zseri.devel@ytrizja.de>"]
 edition = "2018"
 
 [dependencies]
+bit-set = "0.5"
 crossbeam-channel = "0.4"
+indented-blocks = "0.0"
+rand = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
-tracing-subscriber = "0.2.4"
+tracing-subscriber = "0.2"
 ws = "0.9"
-bit-set = "0.5.1"
-rand = "0.7.3"

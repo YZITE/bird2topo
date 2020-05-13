@@ -2,9 +2,6 @@ use serde_json::{map::Map, Value};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 
-/// That module contains an indention-block parser
-mod block;
-
 type Distance = u8;
 type HashValue = u64;
 
@@ -228,7 +225,7 @@ pub fn parse_topology<'a, 'b: 'a>(
 ) -> Result<Topology<'a>, TopologyParseError<'a>> {
     static AREA_PFX: &str = "area ";
 
-    let mut blocks_ = block::parse_nested_blocks(s);
+    let mut blocks_ = indented_blocks::parse_nested_blocks(s);
     if blocks_.is_empty() || !blocks_.remove(0).head.starts_with("BIRD v") {
         return Err(TopologyParseError::UnknownStructure(0));
     }
